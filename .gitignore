@@ -1,0 +1,19 @@
+# Visual Studio 缓存文件
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.vcxproj.user
+# 编译产物
+bin/
+obj/
+x64/
+Debug/
+Release/
+*.exe
+*.dll
+*.pdb
+# Git 忽略规则
+*.log
+*.tmp
