@@ -17,3 +17,5 @@ Release/
 # Git 忽略规则
 *.log
 *.tmp
+*.FBX
+*.png
