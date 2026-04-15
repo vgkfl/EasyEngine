@@ -1,7 +1,9 @@
 # 项目名称 EZEngine
 本项目旨在尝试将引擎拆解为程序资产来实现解耦合
 
-文件夹功能分类
+代码目前都存放在EZEngine中，其他两个文件夹目前尚未承担功能
+
+EZEngine文件夹中的功能分类
 - engine ：未来负责存储引擎模板配置的文件夹
 - module ：存储引擎程序资产的文件夹
 - Project：存储项目文件的文件夹
@@ -11,14 +13,14 @@
 # 编译与运行
 尚未接入cmake，无法直接编译与运行
 
-## 项目结构
+## EZEngine文件夹结构
 - |- engine
-- |- module/..    ## 该文件夹中有 README 注解
+- |- module/..   
 - |- Project/..
 - |- src/..
 - |- vector/..
 
-# 文件名称 module
+# 文件 EZEngine/module
 本文件负责管理EZEngine的程序资产库，本文件将模块的各个责任分散到不同的文件夹中管理
 
 程序资产目前被分为
