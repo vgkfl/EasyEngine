@@ -3,26 +3,27 @@
 #define __TOOL_EDITOR_OVERLAY_RENDER_FEATURE_H__
 
 #include "core/Render/IRenderFeature.h"
+#include "Tool/Editor/RenderPasses/CopyToFinalRenderPass.h"
+#include "Tool/Editor/RenderPasses/EditorOverlayRenderPass.h"
 
 namespace Tool
 {
 	class EditorOverlayRenderFeature final : public EZ::IRenderFeature
 	{
 	public:
-		const char* GetName() const override { return "EditorOverlayRenderFeature"; }
-		bool IsEnabled() const override { return true; }
+		const char* GetName() const override
+		{
+			return "EditorOverlayRenderFeature";
+		}
 
-		void Setup(
-			EZ::ProjectContext& project,
-			EZ::WorldContext& world,
-			ControlProtocol::RenderImageBuffer& imageBuffer,
-			ControlProtocol::RenderDeviceController& device) override;
+		bool IsEnabled(const ControlProtocol::RenderPassContext& ctx) const override;
+		void CollectPasses(
+			ControlProtocol::RenderPassQueue& queue,
+			ControlProtocol::RenderPassContext& ctx) override;
 
-		void Execute(
-			EZ::ProjectContext& project,
-			EZ::WorldContext& world,
-			ControlProtocol::RenderImageBuffer& imageBuffer,
-			ControlProtocol::RenderDeviceController& device) override;
+	private:
+		CopyToFinalRenderPass m_CopyToFinalPass;
+		EditorOverlayRenderPass m_EditorOverlayPass;
 	};
 }
 

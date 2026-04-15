@@ -8,7 +8,7 @@ A modular C++ game engine prototype focused on protocol-oriented architecture, E
 
 ## 项目定位
 
-EasyEngine 不是一个单纯堆功能的课程作业，而是一个持续演进中的引擎原型。  
+EasyEngine 是一个持续演进中的引擎原型。  
 这个项目的重点不只是“把渲染和动画跑起来”，更在于：
 
 - 设计清晰的模块边界

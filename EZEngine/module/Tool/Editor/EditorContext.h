@@ -7,7 +7,6 @@
 
 namespace Tool
 {
-
 	enum class GizmoOperation : EZ::u8
 	{
 		None = 0,
@@ -40,6 +39,8 @@ namespace Tool
 
 		bool showWorldHierarchy = true;
 		bool showInspector = true;
+		bool showSceneControlPanel = true;
+		bool showPerformancePanel = true;
 		bool showDemoWindow = false;
 
 		void ClearSelection()
@@ -54,6 +55,6 @@ namespace Tool
 			hasSelection = true;
 		}
 	};
-
 }
+
 #endif

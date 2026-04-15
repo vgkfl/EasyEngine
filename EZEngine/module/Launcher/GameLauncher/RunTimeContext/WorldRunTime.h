@@ -21,10 +21,13 @@
 #include "System/TransformSystem/TransformSystem.h"
 
 #include "Tool/Editor/EditorContext.h"
-#include "Tool/Editor/ImGui/ImGuiLayer.h"
+#include "Tool/Editor/Imgui/ImGuiLayer.h"
 #include "Tool/Editor/Panels/InspectorPanel.h"
+#include "Tool/Editor/Panels/PerformancePanel.h"
+#include "Tool/Editor/Panels/SceneControlPanel.h"
 #include "Tool/Editor/Panels/WorldHierarchyPanel.h"
 #include "Tool/Editor/RenderFeature/EditorOverlayRenderFeature.h"
+
 #include "Launcher/GameLauncher/Scene/SceneManager.h"
 
 class RenderSystem;
@@ -70,6 +73,8 @@ private:
 	Tool::ImGuiLayer m_ImGuiLayer;
 	Tool::WorldHierarchyPanel m_WorldHierarchyPanel;
 	Tool::InspectorPanel m_InspectorPanel;
+	Tool::SceneControlPanel m_SceneControlPanel;
+	Tool::PerformancePanel m_PerformancePanel;
 
 	Tool::EditorOverlayRenderFeature m_EditorOverlayFeature;
 

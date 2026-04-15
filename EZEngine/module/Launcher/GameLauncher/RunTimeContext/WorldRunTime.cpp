@@ -74,6 +74,8 @@ int WorldRuntime::Initialize(EZ::ProjectContext& project)
 	m_World.Register(m_ImGuiLayer);
 	m_World.Register(m_WorldHierarchyPanel);
 	m_World.Register(m_InspectorPanel);
+	m_World.Register(m_SceneControlPanel);
+	m_World.Register(m_PerformancePanel);
 
 	m_SystemManager.AddSystem<InputSystem>();
 	m_SystemManager.AddSystem<ScriptSystem>();

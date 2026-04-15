@@ -1,34 +1,17 @@
 #include "System/RenderSystem/RenderFeatures/PresentRenderFeature.h"
 
-#include "System/RenderSystem/RenderSystem.h"
-#include "core/Context/RunTimeContext/ProjectContext.h"
-#include "core/Context/RunTimeContext/WorldContext.h"
+#include "ControlProtocol/RenderPipelineController/RenderPassQueue.h"
 
-void PresentRenderFeature::Setup(
-	EZ::ProjectContext& project,
-	EZ::WorldContext& world,
-	ControlProtocol::RenderImageBuffer& imageBuffer,
-	ControlProtocol::RenderDeviceController& device)
+bool PresentRenderFeature::IsEnabled(const ControlProtocol::RenderPassContext& ctx) const
 {
-	(void)project;
-	(void)world;
-	(void)imageBuffer;
-	(void)device;
+	(void)ctx;
+	return m_Settings.enabled;
 }
 
-void PresentRenderFeature::Execute(
-	EZ::ProjectContext& project,
-	EZ::WorldContext& world,
-	ControlProtocol::RenderImageBuffer& imageBuffer,
-	ControlProtocol::RenderDeviceController& device)
+void PresentRenderFeature::CollectPasses(
+	ControlProtocol::RenderPassQueue& queue,
+	ControlProtocol::RenderPassContext& ctx)
 {
-	(void)project;
-
-	auto* renderSystem = world.TryGet<RenderSystem>();
-	if (!renderSystem)
-	{
-		return;
-	}
-
-	renderSystem->Present(world, imageBuffer, device);
+	(void)ctx;
+	queue.AddPass(m_PresentPass);
 }

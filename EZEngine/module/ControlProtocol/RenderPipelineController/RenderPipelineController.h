@@ -7,6 +7,7 @@
 #include "core/Render/IRenderFeature.h"
 #include "ControlProtocol/RenderDeviceController/RenderDeviceController.h"
 #include "ControlProtocol/RenderPipelineController/RenderImageBuffer.h"
+#include "ControlProtocol/RenderPipelineController/RenderPassQueue.h"
 
 namespace ControlProtocol
 {
@@ -21,6 +22,7 @@ namespace ControlProtocol
 		void ClearFeatures()
 		{
 			m_Features.clear();
+			m_PassQueue.Clear();
 		}
 
 		bool BeginFrame(
@@ -31,26 +33,59 @@ namespace ControlProtocol
 		{
 			(void)project;
 			(void)world;
+
 			imageBuffer.ResetFrame();
+			m_PassQueue.Clear();
 			return device.BeginFrame();
 		}
 
+		void ExecutePipeline(
+			EZ::ProjectContext& project,
+			EZ::WorldContext& world,
+			RenderImageBuffer& imageBuffer,
+			RenderDeviceController& device)
+		{
+			RenderPassContext passContext{ project, world, imageBuffer, device };
+
+			m_PassQueue.Clear();
+
+			for (EZ::IRenderFeature* feature : m_Features)
+			{
+				if (!feature)
+				{
+					continue;
+				}
+
+				if (!feature->IsEnabled(passContext))
+				{
+					continue;
+				}
+
+				feature->CollectPasses(m_PassQueue, passContext);
+			}
+
+			m_PassQueue.Sort();
+
+			for (EZ::IRenderPass* pass : m_PassQueue.GetPasses())
+			{
+				if (!pass)
+				{
+					continue;
+				}
+
+				pass->Setup(passContext);
+				pass->Execute(passContext);
+			}
+		}
+
+		// ÀÏÐ­Òé
 		void ExecuteFeatures(
 			EZ::ProjectContext& project,
 			EZ::WorldContext& world,
 			RenderImageBuffer& imageBuffer,
 			RenderDeviceController& device)
 		{
-			for (EZ::IRenderFeature* feature : m_Features)
-			{
-				if (!feature || !feature->IsEnabled())
-				{
-					continue;
-				}
-
-				feature->Setup(project, world, imageBuffer, device);
-				feature->Execute(project, world, imageBuffer, device);
-			}
+			ExecutePipeline(project, world, imageBuffer, device);
 		}
 
 		void EndFrame(
@@ -62,11 +97,14 @@ namespace ControlProtocol
 			(void)project;
 			(void)world;
 			(void)imageBuffer;
+
+			m_PassQueue.Clear();
 			device.EndFrame();
 		}
 
 	private:
 		std::vector<EZ::IRenderFeature*> m_Features;
+		RenderPassQueue m_PassQueue;
 	};
 }
 

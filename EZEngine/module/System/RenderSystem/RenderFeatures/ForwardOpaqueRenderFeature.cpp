@@ -1,39 +1,17 @@
 #include "System/RenderSystem/RenderFeatures/ForwardOpaqueRenderFeature.h"
 
-#include "System/RenderSystem/RenderSystem.h"
-#include "core/Context/RunTimeContext/ProjectContext.h"
-#include "core/Context/RunTimeContext/WorldContext.h"
+#include "ControlProtocol/RenderPipelineController/RenderPassQueue.h"
 
-void ForwardOpaqueRenderFeature::Setup(
-	EZ::ProjectContext& project,
-	EZ::WorldContext& world,
-	ControlProtocol::RenderImageBuffer& imageBuffer,
-	ControlProtocol::RenderDeviceController& device)
+bool ForwardOpaqueRenderFeature::IsEnabled(const ControlProtocol::RenderPassContext& ctx) const
 {
-	(void)project;
-
-	auto* renderSystem = world.TryGet<RenderSystem>();
-	if (!renderSystem)
-	{
-		return;
-	}
-
-	renderSystem->SetupForwardOpaqueTargets(world, imageBuffer, device);
+	(void)ctx;
+	return m_Settings.enabled;
 }
 
-void ForwardOpaqueRenderFeature::Execute(
-	EZ::ProjectContext& project,
-	EZ::WorldContext& world,
-	ControlProtocol::RenderImageBuffer& imageBuffer,
-	ControlProtocol::RenderDeviceController& device)
+void ForwardOpaqueRenderFeature::CollectPasses(
+	ControlProtocol::RenderPassQueue& queue,
+	ControlProtocol::RenderPassContext& ctx)
 {
-	(void)project;
-
-	auto* renderSystem = world.TryGet<RenderSystem>();
-	if (!renderSystem)
-	{
-		return;
-	}
-
-	renderSystem->ExecuteForwardOpaque(world, imageBuffer, device);
+	(void)ctx;
+	queue.AddPass(m_ForwardOpaquePass);
 }
