@@ -3,6 +3,7 @@
 #define __B_P_TRANSFORM_H__
 
 #include "DataProtocol/MathTypes.h"
+#include "core/Types.h"
 
 namespace BaseProtocol
 {
@@ -10,7 +11,8 @@ namespace BaseProtocol
 	{
 		enum : EZ::u8
 		{
-			Flag_LocalDirty = 1 << 0
+			Flag_LocalDirty = 1 << 0,
+			Flag_WorldDirty = 1 << 1
 		};
 
 		const DataProtocol::Transform& Read() const
@@ -21,6 +23,7 @@ namespace BaseProtocol
 		DataProtocol::Transform& Get()
 		{
 			flags |= Flag_LocalDirty;
+			flags |= Flag_WorldDirty;
 			return value;
 		}
 
@@ -28,6 +31,18 @@ namespace BaseProtocol
 		{
 			value = newValue;
 			flags |= Flag_LocalDirty;
+			flags |= Flag_WorldDirty;
+		}
+
+		void MarkLocalDirty()
+		{
+			flags |= Flag_LocalDirty;
+			flags |= Flag_WorldDirty;
+		}
+
+		void MarkWorldDirty()
+		{
+			flags |= Flag_WorldDirty;
 		}
 
 		bool IsLocalDirty() const
@@ -35,44 +50,40 @@ namespace BaseProtocol
 			return (flags & Flag_LocalDirty) != 0;
 		}
 
+		bool IsWorldDirty() const
+		{
+			return (flags & Flag_WorldDirty) != 0;
+		}
+
 		void ClearLocalDirty()
 		{
 			flags &= ~Flag_LocalDirty;
 		}
 
-	private:
-		// 你自己的字段
-		DataProtocol::Transform value{};
-		EZ::u8 flags = Flag_LocalDirty;
-	};
+		void ClearWorldDirty()
+		{
+			flags &= ~Flag_WorldDirty;
+		}
 
-	//所有骨骼渲染等将直接访问
-	struct LocalToWorld
-	{
-		DataProtocol::Mat4 value;
+	public:
+		DataProtocol::Transform value{};
+		EZ::u8 flags = Flag_LocalDirty | Flag_WorldDirty;
 	};
 
 	struct LocalMatrix
 	{
-		DataProtocol::Mat4 value;
+		DataProtocol::Mat4 value{};
+	};
+
+	struct LocalToWorld
+	{
+		DataProtocol::Mat4 value{};
 	};
 
 	struct PreviousLocalToWorld
 	{
-		DataProtocol::Mat4 value;
+		DataProtocol::Mat4 value{};
 	};
-
-	//父子级组件
-	//struct HierarchyNode
-	//{
-	//	EZ::Entity parent = EZ::Entity{};
-	//	EZ::Entity firstChild = EZ::Entity{};
-	//	EZ::Entity nextSibling = EZ::Entity{};
-	//	EZ::Entity prevSibling = EZ::Entity{};
-
-	//	// 可选缓存，方便排序/调试/编辑器
-	//	EZ::u32 depth = 0;
-	//};
 }
 
 #endif

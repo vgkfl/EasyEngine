@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -186,6 +186,9 @@
     <ClCompile Include="module\System\RenderSystem\RenderFeatures\PresentRenderFeature.cpp" />
     <ClCompile Include="module\System\RenderSystem\RenderSystem.cpp" />
     <ClCompile Include="module\System\ScriptSystem\ScriptSystem.cpp" />
+    <ClCompile Include="module\System\TransformSystem\SubSystems\TransformComputeSystem.cpp" />
+    <ClCompile Include="module\System\TransformSystem\SubSystems\TransformDirtySystem.cpp" />
+    <ClCompile Include="module\System\TransformSystem\SubSystems\TransformHierarchySystem.cpp" />
     <ClCompile Include="module\System\TransformSystem\TransformSystem.cpp" />
     <ClCompile Include="module\Tool\Editor\Imgui\ImGuiLayer.cpp" />
     <ClCompile Include="module\Tool\Editor\Panels\InspectorPanel.cpp" />
@@ -234,6 +237,7 @@
     <None Include="module\README_CN.md" />
     <None Include="Project\Test01\res\shaders\Lit\CharacterLit.shader" />
     <None Include="Project\Test01\res\shaders\Lit\StaticLit.shader" />
+    <None Include="README_CN.md" />
     <None Include="vendor\glm\detail\func_common.inl" />
     <None Include="vendor\glm\detail\func_common_simd.inl" />
     <None Include="vendor\glm\detail\func_exponential.inl" />
@@ -394,7 +398,7 @@
     <ClInclude Include="module\BaseProtocol\Mesh\SkinnedMeshRendererComponent.h" />
     <ClInclude Include="module\BaseProtocol\Script\ScriptComponent.h" />
     <ClInclude Include="module\BaseProtocol\Transform\Transform.h" />
-    <ClInclude Include="module\BaseProtocol\Transform\TransformState.h" />
+    <ClInclude Include="module\BaseProtocol\Transform\TransformHierarchy.h" />
     <ClInclude Include="module\ControlProtocol\AnimationManager\AnimationManager.h" />
     <ClInclude Include="module\ControlProtocol\CharacterAssetManager\CharacterAssetManager.h" />
     <ClInclude Include="module\ControlProtocol\EntityManager\Backend\BackendSelector.h" />
@@ -422,6 +426,9 @@
     <ClInclude Include="module\DataProtocol\WindowData.h" />
     <ClInclude Include="module\Launcher\GameLauncher\Scene\IScene.h" />
     <ClInclude Include="module\Launcher\GameLauncher\Scene\SceneManager.h" />
+    <ClInclude Include="module\System\TransformSystem\SubSystems\TransformComputeSystem.h" />
+    <ClInclude Include="module\System\TransformSystem\SubSystems\TransformDirtySystem.h" />
+    <ClInclude Include="module\System\TransformSystem\SubSystems\TransformHierarchySystem.h" />
     <ClInclude Include="module\Tool\Editor\EditorContext.h" />
     <ClInclude Include="module\Launcher\GameLauncher\GameLauncher.h" />
     <ClInclude Include="module\Launcher\GameLauncher\RunTimeContext\WorldRunTime.h" />

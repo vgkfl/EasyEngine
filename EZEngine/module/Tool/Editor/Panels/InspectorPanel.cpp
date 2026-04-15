@@ -17,7 +17,6 @@
 #include "BaseProtocol/Mesh/SkinnedMeshRendererComponent.h"
 #include "BaseProtocol/Script/ScriptComponent.h"
 #include "BaseProtocol/Transform/Transform.h"
-#include "BaseProtocol/Transform/TransformState.h"
 
 #include "ControlProtocol/EntityManager/EntityManager.h"
 #include "ControlProtocol/TransformManager/TransformManager.h"
@@ -131,6 +130,8 @@ namespace
 		ControlProtocol::TransformManager& transformManager,
 		EZ::Entity entity)
 	{
+		(void)transformManager;
+
 		auto* localTransform = entityManager.TryGetComponent<BaseProtocol::LocalTransform>(entity);
 		if (!localTransform)
 		{
@@ -174,7 +175,6 @@ namespace
 			value.scale = DataProtocol::Vec3{ scale[0], scale[1], scale[2] };
 
 			localTransform->Set(value);
-			transformManager.MarkWorldDirty(entity);
 		}
 	}
 
@@ -478,12 +478,6 @@ namespace
 		if (entityManager.HasComponent<BaseProtocol::SkinningPaletteComponent>(entity))
 		{
 			ImGui::BulletText("SkinningPaletteComponent");
-			any = true;
-		}
-
-		if (entityManager.HasComponent<BaseProtocol::TransformState>(entity))
-		{
-			ImGui::BulletText("TransformState");
 			any = true;
 		}
 

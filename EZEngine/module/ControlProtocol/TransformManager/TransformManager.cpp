@@ -1,113 +1,64 @@
 #include "ControlProtocol/TransformManager/TransformManager.h"
 
-#include <stack>
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/matrix_decompose.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <algorithm>
 
 namespace
 {
-	inline EZ::u32 ToMask(BaseProtocol::TransformFlags flags)
+	static BaseProtocol::TransformHierarchy* TryGetHierarchy(
+		ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		return static_cast<EZ::u32>(flags);
+		return entityManager.TryGetComponent<BaseProtocol::TransformHierarchy>(entity);
 	}
 
-	inline void SetFlag(BaseProtocol::TransformFlags& value, BaseProtocol::TransformFlags flag)
+	static const BaseProtocol::TransformHierarchy* TryGetHierarchyConst(
+		const ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		value = static_cast<BaseProtocol::TransformFlags>(ToMask(value) | ToMask(flag));
+		return const_cast<ControlProtocol::EntityManager&>(entityManager)
+			.TryGetComponent<BaseProtocol::TransformHierarchy>(entity);
 	}
 
-	inline void ClearFlag(BaseProtocol::TransformFlags& value, BaseProtocol::TransformFlags flag)
+	static BaseProtocol::TransformHierarchy& EnsureHierarchy(
+		ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		value = static_cast<BaseProtocol::TransformFlags>(ToMask(value) & ~ToMask(flag));
-	}
-
-	inline glm::vec3 ToGLM(const DataProtocol::Vec3& v)
-	{
-		return glm::vec3(v.x, v.y, v.z);
-	}
-
-	inline glm::quat ToGLM(const DataProtocol::Quat& q)
-	{
-		return glm::quat(q.w, q.x, q.y, q.z);
-	}
-
-	inline DataProtocol::Vec3 FromGLM(const glm::vec3& v)
-	{
-		return DataProtocol::Vec3{ v.x, v.y, v.z };
-	}
-
-	inline DataProtocol::Quat FromGLM(const glm::quat& q)
-	{
-		return DataProtocol::Quat{ q.x, q.y, q.z, q.w };
-	}
-
-	inline glm::mat4 ToGLM(const DataProtocol::Mat4& m)
-	{
-		glm::mat4 result(1.0f);
-		for (EZ::u32 i = 0; i < 16; ++i)
+		auto* hierarchy = entityManager.TryGetComponent<BaseProtocol::TransformHierarchy>(entity);
+		if (hierarchy)
 		{
-			result[i / 4][i % 4] = m.m[i];
+			return *hierarchy;
 		}
-		return result;
+		return entityManager.AddComponent<BaseProtocol::TransformHierarchy>(entity);
 	}
 
-	inline DataProtocol::Mat4 FromGLM(const glm::mat4& m)
+	static BaseProtocol::LocalTransform* TryGetLocalTransformMutable(
+		ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		DataProtocol::Mat4 result{};
-		for (EZ::u32 i = 0; i < 16; ++i)
-		{
-			result.m[i] = m[i / 4][i % 4];
-		}
-		return result;
+		return entityManager.TryGetComponent<BaseProtocol::LocalTransform>(entity);
 	}
 
-	inline glm::mat4 ComposeLocalMatrix(const DataProtocol::Transform& t)
+	static const BaseProtocol::LocalTransform* TryGetLocalTransformConst(
+		const ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		const glm::mat4 T = glm::translate(glm::mat4(1.0f), ToGLM(t.position));
-		const glm::mat4 R = glm::toMat4(glm::normalize(ToGLM(t.rotation)));
-		const glm::mat4 S = glm::scale(glm::mat4(1.0f), ToGLM(t.scale));
-		return T * R * S;
+		return const_cast<ControlProtocol::EntityManager&>(entityManager)
+			.TryGetComponent<BaseProtocol::LocalTransform>(entity);
 	}
 
-	inline glm::mat4 ComposeWorldWithInheritance(
-		const glm::mat4& parentWorld,
-		const DataProtocol::Transform& local,
-		BaseProtocol::TransformFlags flags)
+	static BaseProtocol::LocalToWorld* TryGetLocalToWorldMutable(
+		ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
 	{
-		const bool inheritPos = BaseProtocol::HasFlag(flags, BaseProtocol::TransformFlags::InheritPosition);
-		const bool inheritRot = BaseProtocol::HasFlag(flags, BaseProtocol::TransformFlags::InheritRotation);
-		const bool inheritScl = BaseProtocol::HasFlag(flags, BaseProtocol::TransformFlags::InheritScale);
+		return entityManager.TryGetComponent<BaseProtocol::LocalToWorld>(entity);
+	}
 
-		if (inheritPos && inheritRot && inheritScl)
-		{
-			return parentWorld * ComposeLocalMatrix(local);
-		}
-
-		glm::vec3 skew(0.0f);
-		glm::vec4 perspective(0.0f);
-		glm::vec3 parentScale(1.0f);
-		glm::quat parentRotation(1.0f, 0.0f, 0.0f, 0.0f);
-		glm::vec3 parentTranslation(0.0f);
-
-		glm::decompose(
-			parentWorld,
-			parentScale,
-			parentRotation,
-			parentTranslation,
-			skew,
-			perspective
-		);
-
-		DataProtocol::Transform inherited{};
-		inherited.position = inheritPos ? FromGLM(parentTranslation) : DataProtocol::Vec3{};
-		inherited.rotation = inheritRot ? FromGLM(glm::normalize(parentRotation)) : DataProtocol::Quat{};
-		inherited.scale = inheritScl ? FromGLM(parentScale) : DataProtocol::Vec3{ 1.0f, 1.0f, 1.0f };
-
-		return ComposeLocalMatrix(inherited) * ComposeLocalMatrix(local);
+	static const BaseProtocol::LocalToWorld* TryGetLocalToWorldConst(
+		const ControlProtocol::EntityManager& entityManager,
+		EZ::Entity entity)
+	{
+		return const_cast<ControlProtocol::EntityManager&>(entityManager)
+			.TryGetComponent<BaseProtocol::LocalToWorld>(entity);
 	}
 }
 
@@ -120,14 +71,14 @@ namespace ControlProtocol
 
 	EZ::Entity TransformManager::CreateEntity(const DataProtocol::Vec3& position)
 	{
-		auto entity = m_EntityManager.CreateEntity();
-		RegisterEntity(entity);
+		const EZ::Entity entity = m_EntityManager.CreateEntity();
 
 		DataProtocol::Transform initial{};
 		initial.position = position;
-		initial.rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-		initial.scale = { 1.0f, 1.0f, 1.0f };
+		initial.rotation = DataProtocol::Quat{};
+		initial.scale = DataProtocol::Vec3{ 1.0f, 1.0f, 1.0f };
 
+		RegisterEntity(entity);
 		EnableTransform(entity, initial);
 		return entity;
 	}
@@ -137,75 +88,68 @@ namespace ControlProtocol
 		return m_EntityManager.IsValid(entity);
 	}
 
-	void TransformManager::EnsureNode(EZ::Entity entity)
+	void TransformManager::RegisterEntity(EZ::Entity entity)
 	{
 		if (!IsEntityValid(entity))
 		{
 			return;
 		}
 
-		m_Nodes.try_emplace(entity);
-	}
-
-	bool TransformManager::HasNode(EZ::Entity entity) const
-	{
-		return m_Nodes.find(entity) != m_Nodes.end();
-	}
-
-	TransformManager::HierarchyNode* TransformManager::FindNode(EZ::Entity entity)
-	{
-		auto it = m_Nodes.find(entity);
-		return (it == m_Nodes.end()) ? nullptr : &it->second;
-	}
-
-	const TransformManager::HierarchyNode* TransformManager::FindNode(EZ::Entity entity) const
-	{
-		auto it = m_Nodes.find(entity);
-		return (it == m_Nodes.end()) ? nullptr : &it->second;
-	}
-
-	void TransformManager::RegisterEntity(EZ::Entity entity)
-	{
-		EnsureNode(entity);
-	}
-
-	void TransformManager::RemoveNodeInternal(EZ::Entity entity)
-	{
-		HierarchyNode* node = FindNode(entity);
-		if (!node)
-		{
-			return;
-		}
-
-		auto child = node->firstChild;
-		while (child.has_value())
-		{
-			HierarchyNode* childNode = FindNode(*child);
-			auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
-
-			if (childNode)
-			{
-				childNode->parent.reset();
-				childNode->prevSibling.reset();
-				childNode->nextSibling.reset();
-				UpdateDepthRecursive(*child, 0);
-			}
-
-			child = next;
-		}
-
-		UnlinkNode(entity);
-		m_Nodes.erase(entity);
+		EnsureHierarchy(m_EntityManager, entity);
 	}
 
 	void TransformManager::UnregisterEntity(EZ::Entity entity)
 	{
-		if (!HasNode(entity))
+		if (!IsEntityValid(entity))
 		{
 			return;
 		}
 
-		RemoveNodeInternal(entity);
+		if (!m_EntityManager.HasComponent<BaseProtocol::TransformHierarchy>(entity))
+		{
+			return;
+		}
+
+		ClearParent(entity);
+
+		auto* hierarchy = TryGetHierarchy(m_EntityManager, entity);
+		if (hierarchy)
+		{
+			auto child = hierarchy->firstChild;
+			while (child.has_value())
+			{
+				const EZ::Entity currentChild = *child;
+				auto* childHierarchy = TryGetHierarchy(m_EntityManager, currentChild);
+				auto next = childHierarchy ? childHierarchy->nextSibling : std::optional<EZ::Entity>{};
+
+				if (childHierarchy)
+				{
+					childHierarchy->parent.reset();
+					childHierarchy->prevSibling.reset();
+					childHierarchy->nextSibling.reset();
+					childHierarchy->depth = 0;
+					childHierarchy->hierarchyDirty = true;
+				}
+
+				if (auto* childLocal = TryGetLocalTransformMutable(m_EntityManager, currentChild))
+				{
+					childLocal->MarkWorldDirty();
+				}
+
+				UpdateDepthRecursive(currentChild, 0);
+				child = next;
+			}
+
+			hierarchy->firstChild.reset();
+		}
+
+		m_EntityManager.RemoveComponent<BaseProtocol::TransformHierarchy>(entity);
+	}
+
+	bool TransformManager::HasNode(EZ::Entity entity) const
+	{
+		return IsEntityValid(entity) &&
+			m_EntityManager.HasComponent<BaseProtocol::TransformHierarchy>(entity);
 	}
 
 	bool TransformManager::EnableTransform(
@@ -217,11 +161,16 @@ namespace ControlProtocol
 			return false;
 		}
 
-		EnsureNode(entity);
+		RegisterEntity(entity);
 
 		if (!m_EntityManager.HasComponent<BaseProtocol::LocalTransform>(entity))
 		{
 			m_EntityManager.AddComponent<BaseProtocol::LocalTransform>(entity);
+		}
+
+		if (!m_EntityManager.HasComponent<BaseProtocol::LocalMatrix>(entity))
+		{
+			m_EntityManager.AddComponent<BaseProtocol::LocalMatrix>(entity);
 		}
 
 		if (!m_EntityManager.HasComponent<BaseProtocol::LocalToWorld>(entity))
@@ -229,19 +178,21 @@ namespace ControlProtocol
 			m_EntityManager.AddComponent<BaseProtocol::LocalToWorld>(entity);
 		}
 
-		if (!m_EntityManager.HasComponent<BaseProtocol::TransformState>(entity))
+		if (!m_EntityManager.HasComponent<BaseProtocol::PreviousLocalToWorld>(entity))
 		{
-			m_EntityManager.AddComponent<BaseProtocol::TransformState>(entity);
+			m_EntityManager.AddComponent<BaseProtocol::PreviousLocalToWorld>(entity);
+		}
+
+		if (!m_EntityManager.HasComponent<BaseProtocol::TransformHierarchy>(entity))
+		{
+			m_EntityManager.AddComponent<BaseProtocol::TransformHierarchy>(entity);
 		}
 
 		auto& local = m_EntityManager.GetComponent<BaseProtocol::LocalTransform>(entity);
 		local.Set(initial);
 
-		auto& state = m_EntityManager.GetComponent<BaseProtocol::TransformState>(entity);
-		SetFlag(state.flags, BaseProtocol::TransformFlags::WorldDirty);
-		SetFlag(state.flags, BaseProtocol::TransformFlags::HierarchyDirty);
-
-		MarkSubtreeHierarchyDirty(entity);
+		auto& hierarchy = m_EntityManager.GetComponent<BaseProtocol::TransformHierarchy>(entity);
+		hierarchy.hierarchyDirty = true;
 
 		return true;
 	}
@@ -253,29 +204,40 @@ namespace ControlProtocol
 			return;
 		}
 
-		if (!HasTransform(entity))
+		if (m_EntityManager.HasComponent<BaseProtocol::TransformHierarchy>(entity))
 		{
-			return;
-		}
+			ClearParent(entity);
 
-		if (m_EntityManager.HasComponent<BaseProtocol::LocalTransform>(entity))
-		{
-			m_EntityManager.RemoveComponent<BaseProtocol::LocalTransform>(entity);
-		}
+			auto* hierarchy = TryGetHierarchy(m_EntityManager, entity);
+			if (hierarchy)
+			{
+				auto child = hierarchy->firstChild;
+				while (child.has_value())
+				{
+					const EZ::Entity currentChild = *child;
+					auto* childHierarchy = TryGetHierarchy(m_EntityManager, currentChild);
+					auto next = childHierarchy ? childHierarchy->nextSibling : std::optional<EZ::Entity>{};
 
-		if (m_EntityManager.HasComponent<BaseProtocol::LocalToWorld>(entity))
-		{
-			m_EntityManager.RemoveComponent<BaseProtocol::LocalToWorld>(entity);
-		}
+					if (childHierarchy)
+					{
+						childHierarchy->parent.reset();
+						childHierarchy->prevSibling.reset();
+						childHierarchy->nextSibling.reset();
+						childHierarchy->depth = 0;
+						childHierarchy->hierarchyDirty = true;
+					}
 
-		if (m_EntityManager.HasComponent<BaseProtocol::TransformState>(entity))
-		{
-			m_EntityManager.RemoveComponent<BaseProtocol::TransformState>(entity);
-		}
+					if (auto* childLocal = TryGetLocalTransformMutable(m_EntityManager, currentChild))
+					{
+						childLocal->MarkWorldDirty();
+					}
 
-		if (m_EntityManager.HasComponent<BaseProtocol::LocalMatrix>(entity))
-		{
-			m_EntityManager.RemoveComponent<BaseProtocol::LocalMatrix>(entity);
+					UpdateDepthRecursive(currentChild, 0);
+					child = next;
+				}
+			}
+
+			m_EntityManager.RemoveComponent<BaseProtocol::TransformHierarchy>(entity);
 		}
 
 		if (m_EntityManager.HasComponent<BaseProtocol::PreviousLocalToWorld>(entity))
@@ -283,25 +245,35 @@ namespace ControlProtocol
 			m_EntityManager.RemoveComponent<BaseProtocol::PreviousLocalToWorld>(entity);
 		}
 
-		MarkSubtreeHierarchyDirty(entity);
+		if (m_EntityManager.HasComponent<BaseProtocol::LocalToWorld>(entity))
+		{
+			m_EntityManager.RemoveComponent<BaseProtocol::LocalToWorld>(entity);
+		}
+
+		if (m_EntityManager.HasComponent<BaseProtocol::LocalMatrix>(entity))
+		{
+			m_EntityManager.RemoveComponent<BaseProtocol::LocalMatrix>(entity);
+		}
+
+		if (m_EntityManager.HasComponent<BaseProtocol::LocalTransform>(entity))
+		{
+			m_EntityManager.RemoveComponent<BaseProtocol::LocalTransform>(entity);
+		}
 	}
 
 	bool TransformManager::HasTransform(EZ::Entity entity) const
 	{
-		if (!IsEntityValid(entity))
-		{
-			return false;
-		}
-
-		return
+		return IsEntityValid(entity) &&
 			m_EntityManager.HasComponent<BaseProtocol::LocalTransform>(entity) &&
+			m_EntityManager.HasComponent<BaseProtocol::LocalMatrix>(entity) &&
 			m_EntityManager.HasComponent<BaseProtocol::LocalToWorld>(entity) &&
-			m_EntityManager.HasComponent<BaseProtocol::TransformState>(entity);
+			m_EntityManager.HasComponent<BaseProtocol::PreviousLocalToWorld>(entity) &&
+			m_EntityManager.HasComponent<BaseProtocol::TransformHierarchy>(entity);
 	}
 
 	void TransformManager::UnlinkNode(EZ::Entity entity)
 	{
-		HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchy(m_EntityManager, entity);
 		if (!node)
 		{
 			return;
@@ -309,30 +281,33 @@ namespace ControlProtocol
 
 		if (node->parent.has_value())
 		{
-			HierarchyNode* parentNode = FindNode(*node->parent);
+			auto* parentNode = TryGetHierarchy(m_EntityManager, *node->parent);
 			if (parentNode &&
 				parentNode->firstChild.has_value() &&
 				*parentNode->firstChild == entity)
 			{
 				parentNode->firstChild = node->nextSibling;
+				parentNode->hierarchyDirty = true;
 			}
 		}
 
 		if (node->prevSibling.has_value())
 		{
-			HierarchyNode* prevNode = FindNode(*node->prevSibling);
+			auto* prevNode = TryGetHierarchy(m_EntityManager, *node->prevSibling);
 			if (prevNode)
 			{
 				prevNode->nextSibling = node->nextSibling;
+				prevNode->hierarchyDirty = true;
 			}
 		}
 
 		if (node->nextSibling.has_value())
 		{
-			HierarchyNode* nextNode = FindNode(*node->nextSibling);
+			auto* nextNode = TryGetHierarchy(m_EntityManager, *node->nextSibling);
 			if (nextNode)
 			{
 				nextNode->prevSibling = node->prevSibling;
+				nextNode->hierarchyDirty = true;
 			}
 		}
 
@@ -340,82 +315,74 @@ namespace ControlProtocol
 		node->prevSibling.reset();
 		node->nextSibling.reset();
 		node->depth = 0;
+		node->hierarchyDirty = true;
 	}
 
 	void TransformManager::LinkAsFirstChild(EZ::Entity parent, EZ::Entity child)
 	{
-		HierarchyNode* parentNode = FindNode(parent);
-		HierarchyNode* childNode = FindNode(child);
+		auto& parentNode = EnsureHierarchy(m_EntityManager, parent);
+		auto& childNode = EnsureHierarchy(m_EntityManager, child);
 
-		if (!parentNode || !childNode)
+		childNode.parent = parent;
+		childNode.prevSibling.reset();
+		childNode.nextSibling = parentNode.firstChild;
+		childNode.depth = parentNode.depth + 1;
+		childNode.hierarchyDirty = true;
+
+		if (parentNode.firstChild.has_value())
 		{
-			return;
-		}
-
-		childNode->parent = parent;
-		childNode->prevSibling.reset();
-		childNode->nextSibling = parentNode->firstChild;
-
-		if (parentNode->firstChild.has_value())
-		{
-			HierarchyNode* oldFirst = FindNode(*parentNode->firstChild);
-			if (oldFirst)
+			auto* oldFirstChild = TryGetHierarchy(m_EntityManager, *parentNode.firstChild);
+			if (oldFirstChild)
 			{
-				oldFirst->prevSibling = child;
+				oldFirstChild->prevSibling = child;
+				oldFirstChild->hierarchyDirty = true;
 			}
 		}
 
-		parentNode->firstChild = child;
-		UpdateDepthRecursive(child, parentNode->depth + 1);
+		parentNode.firstChild = child;
+		parentNode.hierarchyDirty = true;
 	}
 
 	void TransformManager::UpdateDepthRecursive(EZ::Entity entity, EZ::u32 depth)
 	{
-		HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchy(m_EntityManager, entity);
 		if (!node)
 		{
 			return;
 		}
 
 		node->depth = depth;
+		node->hierarchyDirty = true;
 
 		auto child = node->firstChild;
 		while (child.has_value())
 		{
-			HierarchyNode* childNode = FindNode(*child);
+			const EZ::Entity currentChild = *child;
+			auto* childNode = TryGetHierarchy(m_EntityManager, currentChild);
 			auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
 
-			UpdateDepthRecursive(*child, depth + 1);
+			UpdateDepthRecursive(currentChild, depth + 1);
 			child = next;
 		}
 	}
 
 	bool TransformManager::IsDescendantOf(
 		EZ::Entity child,
-		EZ::Entity potentialAncestor
-	) const
+		EZ::Entity potentialAncestor) const
 	{
 		if (!IsEntityValid(child) || !IsEntityValid(potentialAncestor))
 		{
 			return false;
 		}
 
-		std::optional<EZ::Entity> current = child;
-
-		while (current.has_value())
+		auto* hierarchy = TryGetHierarchyConst(m_EntityManager, child);
+		while (hierarchy && hierarchy->parent.has_value())
 		{
-			if (*current == potentialAncestor)
+			if (*hierarchy->parent == potentialAncestor)
 			{
 				return true;
 			}
-
-			const HierarchyNode* node = FindNode(*current);
-			if (!node)
-			{
-				return false;
-			}
-
-			current = node->parent;
+			hierarchy = TryGetHierarchyConst(m_EntityManager, *hierarchy->parent);
 		}
 
 		return false;
@@ -423,51 +390,58 @@ namespace ControlProtocol
 
 	bool TransformManager::SetParent(
 		EZ::Entity child,
-		const std::optional<EZ::Entity>& parent
-	)
+		const std::optional<EZ::Entity>& parent)
 	{
 		if (!IsEntityValid(child))
 		{
 			return false;
 		}
 
-		if (parent.has_value())
-		{
-			if (!IsEntityValid(*parent))
-			{
-				return false;
-			}
+		RegisterEntity(child);
 
-			if (*parent == child)
-			{
-				return false;
-			}
+		if (!parent.has_value())
+		{
+			return ClearParent(child);
 		}
 
-		EnsureNode(child);
-
-		if (parent.has_value())
+		if (!IsEntityValid(*parent))
 		{
-			EnsureNode(*parent);
+			return false;
+		}
 
-			if (IsDescendantOf(*parent, child))
-			{
-				return false;
-			}
+		if (*parent == child)
+		{
+			return false;
+		}
+
+		RegisterEntity(*parent);
+
+		if (IsDescendantOf(*parent, child))
+		{
+			return false;
+		}
+
+		auto* childNode = TryGetHierarchy(m_EntityManager, child);
+		if (!childNode)
+		{
+			return false;
+		}
+
+		if (childNode->parent.has_value() && *childNode->parent == *parent)
+		{
+			return true;
 		}
 
 		UnlinkNode(child);
+		LinkAsFirstChild(*parent, child);
+		UpdateDepthRecursive(child, GetDepth(*parent) + 1);
 
-		if (parent.has_value())
+		if (auto* parentNode = TryGetHierarchy(m_EntityManager, *parent))
 		{
-			LinkAsFirstChild(*parent, child);
-		}
-		else
-		{
-			UpdateDepthRecursive(child, 0);
+			parentNode->hierarchyDirty = true;
 		}
 
-		MarkSubtreeHierarchyDirty(child);
+		MarkSubtreeWorldDirty(child);
 		return true;
 	}
 
@@ -478,193 +452,183 @@ namespace ControlProtocol
 			return false;
 		}
 
-		HierarchyNode* node = FindNode(child);
-		if (!node)
+		auto* childNode = TryGetHierarchy(m_EntityManager, child);
+		if (!childNode)
 		{
 			return false;
 		}
 
+		if (!childNode->parent.has_value())
+		{
+			UpdateDepthRecursive(child, 0);
+			childNode->hierarchyDirty = true;
+			return true;
+		}
+
 		UnlinkNode(child);
 		UpdateDepthRecursive(child, 0);
-		MarkSubtreeHierarchyDirty(child);
+		childNode->hierarchyDirty = true;
+
+		MarkSubtreeWorldDirty(child);
 		return true;
 	}
 
 	std::optional<EZ::Entity> TransformManager::GetParent(EZ::Entity entity) const
 	{
-		const HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchyConst(m_EntityManager, entity);
 		return node ? node->parent : std::optional<EZ::Entity>{};
 	}
 
 	void TransformManager::MarkSubtreeWorldDirty(EZ::Entity root)
 	{
-		if (!HasNode(root))
+		auto* local = TryGetLocalTransformMutable(m_EntityManager, root);
+		if (local)
+		{
+			local->MarkWorldDirty();
+		}
+
+		auto* hierarchy = TryGetHierarchy(m_EntityManager, root);
+		if (!hierarchy)
 		{
 			return;
 		}
 
-		std::stack<EZ::Entity> stack;
-		stack.push(root);
-
-		while (!stack.empty())
+		auto child = hierarchy->firstChild;
+		while (child.has_value())
 		{
-			const EZ::Entity current = stack.top();
-			stack.pop();
+			const EZ::Entity currentChild = *child;
+			auto* childHierarchy = TryGetHierarchy(m_EntityManager, currentChild);
+			auto next = childHierarchy ? childHierarchy->nextSibling : std::optional<EZ::Entity>{};
 
-			if (HasTransform(current))
-			{
-				auto& state = m_EntityManager.GetComponent<BaseProtocol::TransformState>(current);
-				SetFlag(state.flags, BaseProtocol::TransformFlags::WorldDirty);
-			}
-
-			const HierarchyNode* node = FindNode(current);
-			if (!node)
-			{
-				continue;
-			}
-
-			auto child = node->firstChild;
-			while (child.has_value())
-			{
-				const HierarchyNode* childNode = FindNode(*child);
-				auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
-
-				stack.push(*child);
-				child = next;
-			}
+			MarkSubtreeWorldDirty(currentChild);
+			child = next;
 		}
 	}
 
 	void TransformManager::MarkSubtreeHierarchyDirty(EZ::Entity root)
 	{
-		if (!HasNode(root))
+		auto* hierarchy = TryGetHierarchy(m_EntityManager, root);
+		if (hierarchy)
+		{
+			hierarchy->hierarchyDirty = true;
+		}
+
+		if (auto* local = TryGetLocalTransformMutable(m_EntityManager, root))
+		{
+			local->MarkWorldDirty();
+		}
+
+		if (!hierarchy)
 		{
 			return;
 		}
 
-		std::stack<EZ::Entity> stack;
-		stack.push(root);
-
-		while (!stack.empty())
+		auto child = hierarchy->firstChild;
+		while (child.has_value())
 		{
-			const EZ::Entity current = stack.top();
-			stack.pop();
+			const EZ::Entity currentChild = *child;
+			auto* childHierarchy = TryGetHierarchy(m_EntityManager, currentChild);
+			auto next = childHierarchy ? childHierarchy->nextSibling : std::optional<EZ::Entity>{};
 
-			if (HasTransform(current))
-			{
-				auto& state = m_EntityManager.GetComponent<BaseProtocol::TransformState>(current);
-				SetFlag(state.flags, BaseProtocol::TransformFlags::HierarchyDirty);
-				SetFlag(state.flags, BaseProtocol::TransformFlags::WorldDirty);
-			}
-
-			const HierarchyNode* node = FindNode(current);
-			if (!node)
-			{
-				continue;
-			}
-
-			auto child = node->firstChild;
-			while (child.has_value())
-			{
-				const HierarchyNode* childNode = FindNode(*child);
-				auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
-
-				stack.push(*child);
-				child = next;
-			}
+			MarkSubtreeHierarchyDirty(currentChild);
+			child = next;
 		}
 	}
 
 	void TransformManager::MarkWorldDirty(EZ::Entity entity)
 	{
+		if (!IsEntityValid(entity))
+		{
+			return;
+		}
+
 		MarkSubtreeWorldDirty(entity);
 	}
 
 	void TransformManager::MarkHierarchyDirty(EZ::Entity entity)
 	{
+		if (!IsEntityValid(entity))
+		{
+			return;
+		}
+
 		MarkSubtreeHierarchyDirty(entity);
 	}
 
 	const DataProtocol::Transform* TransformManager::TryGetLocalTransform(EZ::Entity entity) const
 	{
-		if (!HasTransform(entity))
-		{
-			return nullptr;
-		}
-
-		const auto& local = m_EntityManager.GetComponent<BaseProtocol::LocalTransform>(entity);
-		return &local.Read();
+		const auto* local = TryGetLocalTransformConst(m_EntityManager, entity);
+		return local ? &local->Read() : nullptr;
 	}
 
 	const DataProtocol::Mat4* TransformManager::TryGetLocalToWorld(EZ::Entity entity) const
 	{
-		if (!HasTransform(entity))
-		{
-			return nullptr;
-		}
-
-		const auto& world = m_EntityManager.GetComponent<BaseProtocol::LocalToWorld>(entity);
-		return &world.value;
-	}
-
-	const BaseProtocol::TransformState* TransformManager::TryGetTransformState(EZ::Entity entity) const
-	{
-		if (!HasTransform(entity))
-		{
-			return nullptr;
-		}
-
-		const auto& state = m_EntityManager.GetComponent<BaseProtocol::TransformState>(entity);
-		return &state;
+		const auto* localToWorld = TryGetLocalToWorldConst(m_EntityManager, entity);
+		return localToWorld ? &localToWorld->value : nullptr;
 	}
 
 	std::optional<EZ::Entity> TransformManager::GetFirstChild(EZ::Entity entity) const
 	{
-		const HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchyConst(m_EntityManager, entity);
 		return node ? node->firstChild : std::optional<EZ::Entity>{};
 	}
 
 	std::optional<EZ::Entity> TransformManager::GetNextSibling(EZ::Entity entity) const
 	{
-		const HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchyConst(m_EntityManager, entity);
 		return node ? node->nextSibling : std::optional<EZ::Entity>{};
 	}
 
 	std::optional<EZ::Entity> TransformManager::GetPrevSibling(EZ::Entity entity) const
 	{
-		const HierarchyNode* node = FindNode(entity);
+		auto* node = TryGetHierarchyConst(m_EntityManager, entity);
 		return node ? node->prevSibling : std::optional<EZ::Entity>{};
 	}
 
 	EZ::u32 TransformManager::GetDepth(EZ::Entity entity) const
 	{
-		const HierarchyNode* node = FindNode(entity);
-		return node ? node->depth : 0;
+		auto* node = TryGetHierarchyConst(m_EntityManager, entity);
+		return node ? node->depth : 0u;
 	}
 
 	void TransformManager::GetRootEntities(std::vector<EZ::Entity>& outRoots) const
 	{
 		outRoots.clear();
-		outRoots.reserve(m_Nodes.size());
 
-		for (const auto& [entity, node] : m_Nodes)
-		{
-			if (!IsEntityValid(entity))
+		auto& entityManager = const_cast<EntityManager&>(m_EntityManager);
+		entityManager.ForEach<BaseProtocol::TransformHierarchy>(
+			[this, &outRoots](EZ::Entity entity, BaseProtocol::TransformHierarchy& hierarchy)
 			{
-				continue;
-			}
+				bool isRoot = !hierarchy.parent.has_value();
 
-			if (!node.parent.has_value())
-			{
-				outRoots.push_back(entity);
+				if (hierarchy.parent.has_value())
+				{
+					const EZ::Entity parent = *hierarchy.parent;
+					if (!IsEntityValid(parent) || !HasNode(parent))
+					{
+						isRoot = true;
+					}
+				}
+
+				if (isRoot)
+				{
+					outRoots.push_back(entity);
+				}
 			}
-		}
+		);
+
+		std::sort(
+			outRoots.begin(),
+			outRoots.end(),
+			[](EZ::Entity a, EZ::Entity b)
+			{
+				return static_cast<EZ::u32>(a) < static_cast<EZ::u32>(b);
+			});
 	}
 
 	void TransformManager::BuildSubtreePreorderRecursive(
 		EZ::Entity root,
-		std::vector<EZ::Entity>& outList
-	) const
+		std::vector<EZ::Entity>& outList) const
 	{
 		if (!IsEntityValid(root))
 		{
@@ -673,19 +637,13 @@ namespace ControlProtocol
 
 		outList.push_back(root);
 
-		const HierarchyNode* node = FindNode(root);
-		if (!node)
-		{
-			return;
-		}
-
-		auto child = node->firstChild;
+		auto child = GetFirstChild(root);
 		while (child.has_value())
 		{
-			const HierarchyNode* childNode = FindNode(*child);
-			auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
+			const EZ::Entity currentChild = *child;
+			auto next = GetNextSibling(currentChild);
 
-			BuildSubtreePreorderRecursive(*child, outList);
+			BuildSubtreePreorderRecursive(currentChild, outList);
 			child = next;
 		}
 	}
@@ -697,7 +655,7 @@ namespace ControlProtocol
 		std::vector<EZ::Entity> roots;
 		GetRootEntities(roots);
 
-		for (const auto& root : roots)
+		for (EZ::Entity root : roots)
 		{
 			BuildSubtreePreorderRecursive(root, outList);
 		}
@@ -705,178 +663,42 @@ namespace ControlProtocol
 
 	void TransformManager::BuildSubtreePreorder(
 		EZ::Entity root,
-		std::vector<EZ::Entity>& outList
-	) const
+		std::vector<EZ::Entity>& outList) const
 	{
 		outList.clear();
-		BuildSubtreePreorderRecursive(root, outList);
-	}
 
-	void TransformManager::CollectLocalDirtyToWorldDirty()
-	{
-		for (auto& [entity, node] : m_Nodes)
-		{
-			(void)node;
-
-			if (!HasTransform(entity))
-			{
-				continue;
-			}
-
-			auto& local = m_EntityManager.GetComponent<BaseProtocol::LocalTransform>(entity);
-			if (!local.IsLocalDirty())
-			{
-				continue;
-			}
-
-			local.ClearLocalDirty();
-			MarkSubtreeWorldDirty(entity);
-		}
-	}
-
-	void TransformManager::UpdateNodeRecursive(
-		EZ::Entity entity,
-		const DataProtocol::Mat4& inheritedWorld,
-		bool hasInheritedTransform
-	)
-	{
-		const HierarchyNode* node = FindNode(entity);
-		if (!node)
+		if (!IsEntityValid(root))
 		{
 			return;
 		}
 
-		DataProtocol::Mat4 currentWorld = inheritedWorld;
-		bool currentHasTransform = hasInheritedTransform;
-
-		if (HasTransform(entity))
+		if (!HasNode(root))
 		{
-			auto& local = m_EntityManager.GetComponent<BaseProtocol::LocalTransform>(entity);
-			auto& localToWorld = m_EntityManager.GetComponent<BaseProtocol::LocalToWorld>(entity);
-			auto& state = m_EntityManager.GetComponent<BaseProtocol::TransformState>(entity);
-
-			const bool needUpdate =
-				BaseProtocol::HasFlag(state.flags, BaseProtocol::TransformFlags::WorldDirty) ||
-				BaseProtocol::HasFlag(state.flags, BaseProtocol::TransformFlags::HierarchyDirty);
-
-			if (needUpdate)
-			{
-				const glm::mat4 localMatrix = ComposeLocalMatrix(local.Read());
-
-				if (m_EntityManager.HasComponent<BaseProtocol::PreviousLocalToWorld>(entity))
-				{
-					auto& prev = m_EntityManager.GetComponent<BaseProtocol::PreviousLocalToWorld>(entity);
-					prev.value = localToWorld.value;
-				}
-
-				if (m_EntityManager.HasComponent<BaseProtocol::LocalMatrix>(entity))
-				{
-					auto& cachedLocal = m_EntityManager.GetComponent<BaseProtocol::LocalMatrix>(entity);
-					cachedLocal.value = FromGLM(localMatrix);
-				}
-
-				glm::mat4 worldMatrix = localMatrix;
-
-				if (hasInheritedTransform)
-				{
-					worldMatrix = ComposeWorldWithInheritance(
-						ToGLM(inheritedWorld),
-						local.Read(),
-						state.flags
-					);
-				}
-
-				localToWorld.value = FromGLM(worldMatrix);
-
-				ClearFlag(state.flags, BaseProtocol::TransformFlags::WorldDirty);
-				ClearFlag(state.flags, BaseProtocol::TransformFlags::HierarchyDirty);
-			}
-
-			currentWorld = localToWorld.value;
-			currentHasTransform = true;
+			outList.push_back(root);
+			return;
 		}
 
-		auto child = node->firstChild;
-		while (child.has_value())
-		{
-			const HierarchyNode* childNode = FindNode(*child);
-			auto next = childNode ? childNode->nextSibling : std::optional<EZ::Entity>{};
-
-			UpdateNodeRecursive(*child, currentWorld, currentHasTransform);
-			child = next;
-		}
-	}
-
-	void TransformManager::GarbageCollectInvalidEntities()
-	{
-		std::vector<EZ::Entity> invalidEntities;
-		invalidEntities.reserve(m_Nodes.size());
-
-		for (const auto& [entity, node] : m_Nodes)
-		{
-			(void)node;
-			if (!IsEntityValid(entity))
-			{
-				invalidEntities.push_back(entity);
-			}
-		}
-
-		for (const auto& entity : invalidEntities)
-		{
-			RemoveNodeInternal(entity);
-		}
+		BuildSubtreePreorderRecursive(root, outList);
 	}
 
 	void TransformManager::Update()
 	{
-		GarbageCollectInvalidEntities();
-		CollectLocalDirtyToWorldDirty();
-
-		const DataProtocol::Mat4 identity = FromGLM(glm::mat4(1.0f));
-
-		for (const auto& [entity, node] : m_Nodes)
-		{
-			if (!IsEntityValid(entity))
-			{
-				continue;
-			}
-
-			if (node.parent.has_value())
-			{
-				continue;
-			}
-
-			UpdateNodeRecursive(entity, identity, false);
-		}
+		// 新规下 transform 统一由 TransformSystem::LateUpdate() 结算。
 	}
 
 	void TransformManager::UpdateSubtree(EZ::Entity root)
 	{
-		if (!HasNode(root) || !IsEntityValid(root))
+		if (!IsEntityValid(root))
 		{
 			return;
 		}
 
-		GarbageCollectInvalidEntities();
-		CollectLocalDirtyToWorldDirty();
+		// 兼容旧接口：这里只保留“打脏”语义，不做即时矩阵计算。
+		MarkSubtreeWorldDirty(root);
+	}
 
-		const auto parent = GetParent(root);
-
-		if (!parent.has_value() || !HasTransform(*parent))
-		{
-			const DataProtocol::Mat4 identity = FromGLM(glm::mat4(1.0f));
-			UpdateNodeRecursive(root, identity, false);
-			return;
-		}
-
-		const auto* parentWorld = TryGetLocalToWorld(*parent);
-		if (!parentWorld)
-		{
-			const DataProtocol::Mat4 identity = FromGLM(glm::mat4(1.0f));
-			UpdateNodeRecursive(root, identity, false);
-			return;
-		}
-
-		UpdateNodeRecursive(root, *parentWorld, true);
+	void TransformManager::GarbageCollectInvalidEntities()
+	{
+		// 新实现没有内部 m_Nodes，不需要额外清理。
 	}
 }

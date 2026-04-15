@@ -80,7 +80,7 @@ int WorldRuntime::Initialize(EZ::ProjectContext& project)
 	m_SystemManager.AddSystem<AnimatorSystem>();
 	m_SystemManager.AddSystem<PhysicsSystem>();
 
-	m_TransformSystem = m_SystemManager.AddSystem<TransformSystem>(m_TransformManager);
+	m_TransformSystem = m_SystemManager.AddSystem<TransformSystem>(m_EntityManager);
 	if (m_TransformSystem)
 	{
 		m_World.Register(*m_TransformSystem);

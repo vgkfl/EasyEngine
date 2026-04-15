@@ -1,10 +1,10 @@
-#include "TransformSystem.h"
+#include "System/TransformSystem/TransformSystem.h"
 
-#include "core/Context/RunTimeContext/ProjectContext.h"
-#include "core/Context/RunTimeContext/WorldContext.h"
-
-TransformSystem::TransformSystem(ControlProtocol::TransformManager& manager)
-	: m_Manager(manager)
+TransformSystem::TransformSystem(ControlProtocol::EntityManager& entityManager)
+	: m_EntityManager(entityManager)
+	, m_HierarchySystem(entityManager)
+	, m_DirtySystem(entityManager)
+	, m_ComputeSystem(entityManager)
 {
 }
 
@@ -20,5 +20,10 @@ void TransformSystem::LateUpdate(EZ::ProjectContext& project, EZ::WorldContext& 
 	(void)project;
 	(void)world;
 	(void)deltaTime;
-	m_Manager.Update();
+
+	m_HierarchySystem.Flush();
+	m_DirtySystem.CollectLocalDirty();
+	m_DirtySystem.PropagateWorldDirty();
+	m_ComputeSystem.UpdateWorldTransforms();
+	m_DirtySystem.ClearFrameDirty();
 }

@@ -3,12 +3,15 @@
 #define __TRANSFORM_SYSTEM_H__
 
 #include "core/System/ISystem.h"
-#include "ControlProtocol/TransformManager/TransformManager.h"
+#include "ControlProtocol/EntityManager/EntityManager.h"
+#include "SubSystems/TransformHierarchySystem.h"
+#include "SubSystems/TransformDirtySystem.h"
+#include "SubSystems/TransformComputeSystem.h"
 
-class TransformSystem : public EZ::ISystem
+class TransformSystem final : public EZ::ISystem
 {
 public:
-	explicit TransformSystem(ControlProtocol::TransformManager& manager);
+	explicit TransformSystem(ControlProtocol::EntityManager& entityManager);
 
 public:
 	const char* GetName() const override { return "TransformSystem"; }
@@ -17,11 +20,16 @@ public:
 	void LateUpdate(EZ::ProjectContext& project, EZ::WorldContext& world, float deltaTime) override;
 
 public:
-	ControlProtocol::TransformManager& GetManager() { return m_Manager; }
-	const ControlProtocol::TransformManager& GetManager() const { return m_Manager; }
+	TransformHierarchySystem& GetHierarchySystem() { return m_HierarchySystem; }
+	TransformDirtySystem& GetDirtySystem() { return m_DirtySystem; }
+	TransformComputeSystem& GetComputeSystem() { return m_ComputeSystem; }
 
 private:
-	ControlProtocol::TransformManager& m_Manager;
+	ControlProtocol::EntityManager& m_EntityManager;
+
+	TransformHierarchySystem m_HierarchySystem;
+	TransformDirtySystem m_DirtySystem;
+	TransformComputeSystem m_ComputeSystem;
 };
 
 #endif
