@@ -134,6 +134,6 @@ void Test01Project::RegisterStartupScene(EZ::WorldContext& world)
 	sceneManager->RegisterScene(std::make_unique<Test01Scenes::RootMotionRunwayScene>());
 	sceneManager->RegisterScene(std::make_unique<Test01Scenes::ThirdPersonControllerScene>());
 
-	// 默认启动哪个场景，就改这里
-	sceneManager->LoadScene("ThirdPersonController", world);
+	// 默认启动场景
+	sceneManager->LoadScene("CrowdMixedStates", world);
 }

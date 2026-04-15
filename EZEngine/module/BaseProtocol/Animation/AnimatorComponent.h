@@ -13,9 +13,8 @@ namespace BaseProtocol
 {
 	struct AnimatorComponent
 	{
-		// -----------------------------
 		// Unity风格 API
-		// -----------------------------
+
 		void BindController(const DataProtocol::AnimatorControllerAsset* newController)
 		{
 			controller = newController;
@@ -70,8 +69,6 @@ namespace BaseProtocol
 			requestedTransitionDuration = 0.0f;
 		}
 
-		// 这一版先兼容 Unity 风格 API。
-		// 先做“延迟切状态”，不做真正混合。
 		void CrossFade(const std::string& stateName, float transitionDuration = 0.1f, float normalizedTime = 0.0f)
 		{
 			requestedStateName = stateName;
@@ -144,9 +141,7 @@ namespace BaseProtocol
 			debugRootMotionCurrentPosition = { 0.0f, 0.0f, 0.0f };
 #endif
 		}
-		// -----------------------------
 		// 运行时状态
-		// -----------------------------
 		const DataProtocol::AnimatorControllerAsset* controller = nullptr;
 		const DataProtocol::AnimationClipAsset* currentClip = nullptr;
 
@@ -170,8 +165,7 @@ namespace BaseProtocol
 		bool hasRootMotion = false;
 		BaseProtocol::RootMotionDelta extractedRootMotion{};
 
-		// 先用默认 0 号骨骼做 root motion 源
-		// 后面再升级成自动查找 "Root" / "root" / "RootMotion"
+		// 指定的根骨骼
 		EZ::u32 rootMotionBoneIndex = 0;
 
 		bool consumeRootMotionInPose = true;
