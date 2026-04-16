@@ -2,12 +2,14 @@
 #ifndef __CORE_I_PROJECT_H__
 #define __CORE_I_PROJECT_H__
 
+#include "core/Engine/IRuntimeContextConfigurator.h"
+
 namespace EZ
 {
 	struct ProjectContext;
 	struct WorldContext;
 
-	class IProject
+	class IProject : public IRuntimeContextConfigurator
 	{
 	public:
 		virtual ~IProject() = default;

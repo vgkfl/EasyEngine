@@ -16,6 +16,7 @@ namespace DataProtocol
 
 namespace EZ
 {
+	class IProject;
 	struct ProjectContext;
 	struct WorldContext;
 
@@ -35,6 +36,10 @@ namespace EZ
 		{
 			return GetEngineId();
 		}
+
+		virtual int Start(IProject* project) = 0;
+		virtual void RequestStop() = 0;
+		virtual bool IsRunning() const = 0;
 
 		virtual void BuildDefaultEngineConfig(EngineConfigTable& outConfig) const
 		{

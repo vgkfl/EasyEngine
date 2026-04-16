@@ -86,6 +86,11 @@ namespace EZ
 			}
 		}
 
+		void Clear()
+		{
+			m_Systems.clear();
+		}
+
 	private:
 		std::vector<std::unique_ptr<ISystem>> m_Systems;
 	};

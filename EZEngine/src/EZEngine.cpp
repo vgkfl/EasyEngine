@@ -1,25 +1,31 @@
 #include <cstdio>
+#include <memory>
 
-#include "core/LauncherManager/LauncherManager.h"
+#include "core/Engine/EngineRegistry.h"
+#include "core/Engine/IEngine.h"
+
+#include "../Project/Test01/Test01.h"
 
 int main()
 {
 	std::printf("[main] program start\n");
 
-	auto launcher = EZ::LauncherManager::Get().Create("GameLauncher");
-	if (!launcher)
+	auto engine = EZ::EngineRegistry::Get().Create("ez.game_launcher.engine");
+	if (!engine)
 	{
-		std::printf("[main] Create(GameLauncher) failed\n");
+		std::printf("[main] create engine failed\n");
 		std::fflush(stdout);
 		return -1;
 	}
 
-	std::printf("[main] launcher created\n");
+	std::printf("[main] engine created\n");
 	std::fflush(stdout);
 
-	const int ret = launcher->Start();
+	std::unique_ptr<EZ::IProject> project = std::make_unique<Test01Project>();
 
-	std::printf("[main] launcher finished, ret=%d\n", ret);
+	const int ret = engine->Start(project.get());
+
+	std::printf("[main] engine finished, ret=%d\n", ret);
 	std::fflush(stdout);
 
 	return ret;

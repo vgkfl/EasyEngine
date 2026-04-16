@@ -90,7 +90,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module;Engine</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -110,7 +110,7 @@
       <PreprocessorDefinitions>GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL;WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module;Engine</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -129,7 +129,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module;Engine</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -149,7 +149,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>GLEW_STATIC;GLM_ENABLE_EXPERIMENTAL;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)third_party\lib\GLEW\include;$(SolutionDir)third_party\lib\SDL3-3.4.2\include;vendor;src;module;Engine</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
@@ -176,7 +176,7 @@
     <ClCompile Include="module\ControlProtocol\TransformManager\TransformManager.cpp" />
     <ClCompile Include="module\ControlProtocol\WindowController\WindowController.cpp" />
     <ClCompile Include="module\Launcher\GameLauncher\GameLauncher.cpp" />
-    <ClCompile Include="module\Launcher\GameLauncher\RunTimeContext\WorldRunTime.cpp" />
+    <ClCompile Include="module\Launcher\GameLauncher\GameTemplateEngine.cpp" />
     <ClCompile Include="module\Launcher\GameLauncher\Scene\SceneManager.cpp" />
     <ClCompile Include="module\System\AnimationSystem\AnimationSystem.cpp" />
     <ClCompile Include="module\System\AnimatorSystem\AnimatorSystem.cpp" />
@@ -184,6 +184,8 @@
     <ClCompile Include="module\System\PhysicsSystem\PhysicsSystem.cpp" />
     <ClCompile Include="module\System\RenderSystem\RenderFeatures\ForwardOpaqueRenderFeature.cpp" />
     <ClCompile Include="module\System\RenderSystem\RenderFeatures\PresentRenderFeature.cpp" />
+    <ClCompile Include="module\System\RenderSystem\RenderPasses\ForwardOpaqueRenderPass.cpp" />
+    <ClCompile Include="module\System\RenderSystem\RenderPasses\PresentRenderPass.cpp" />
     <ClCompile Include="module\System\RenderSystem\RenderSystem.cpp" />
     <ClCompile Include="module\System\ScriptSystem\ScriptSystem.cpp" />
     <ClCompile Include="module\System\TransformSystem\SubSystems\TransformComputeSystem.cpp" />
@@ -192,8 +194,12 @@
     <ClCompile Include="module\System\TransformSystem\TransformSystem.cpp" />
     <ClCompile Include="module\Tool\Editor\Imgui\ImGuiLayer.cpp" />
     <ClCompile Include="module\Tool\Editor\Panels\InspectorPanel.cpp" />
+    <ClCompile Include="module\Tool\Editor\Panels\PerformancePanel.cpp" />
+    <ClCompile Include="module\Tool\Editor\Panels\SceneControlPanel.cpp" />
     <ClCompile Include="module\Tool\Editor\Panels\WorldHierarchyPanel.cpp" />
     <ClCompile Include="module\Tool\Editor\RenderFeature\EditorOverlayRenderFeature.cpp" />
+    <ClCompile Include="module\Tool\Editor\RenderPasses\CopyToFinalRenderPass.cpp" />
+    <ClCompile Include="module\Tool\Editor\RenderPasses\EditorOverlayRenderPass.cpp" />
     <ClCompile Include="module\Tool\FBXImporter\FBXImporter.cpp" />
     <ClCompile Include="Project\Test01\Scenes\Test01PerfScenes.cpp" />
     <ClCompile Include="Project\Test01\Scripts\PlayerControllerScript.cpp" />
@@ -202,6 +208,8 @@
     <ClCompile Include="Project\Test01\Scripts\SceneSmokeTestScript.cpp" />
     <ClCompile Include="Project\Test01\Scripts\ThirdPersonControllerScript.cpp" />
     <ClCompile Include="Project\Test01\Test01.cpp" />
+    <ClCompile Include="Engine\TemplateEngineBase\RuntimeContext.cpp" />
+    <ClCompile Include="Engine\TemplateEngineBase\TemplateEngineBase.cpp" />
     <ClCompile Include="src\EZEngine.cpp" />
     <ClCompile Include="vendor\glm\detail\glm.cpp" />
     <ClCompile Include="vendor\imgui\imgui.cpp" />
@@ -414,6 +422,7 @@
     <ClInclude Include="module\ControlProtocol\PhysicsWorldController\PhysicsWorldController.h" />
     <ClInclude Include="module\ControlProtocol\RenderDeviceController\RenderDeviceController.h" />
     <ClInclude Include="module\ControlProtocol\RenderPipelineController\RenderImageBuffer.h" />
+    <ClInclude Include="module\ControlProtocol\RenderPipelineController\RenderPassQueue.h" />
     <ClInclude Include="module\ControlProtocol\RenderPipelineController\RenderPipelineController.h" />
     <ClInclude Include="module\ControlProtocol\RenderDeviceController\OpenGL\GLRenderDeviceController.h" />
     <ClInclude Include="module\ControlProtocol\TransformManager\TransformManager.h" />
@@ -423,16 +432,29 @@
     <ClInclude Include="module\DataProtocol\AnimatorControllerAsset.h" />
     <ClInclude Include="module\DataProtocol\ImageAsset.h" />
     <ClInclude Include="module\DataProtocol\MaterialAsset.h" />
+    <ClInclude Include="module\DataProtocol\Render\RenderFeatureSettings.h" />
     <ClInclude Include="module\DataProtocol\WindowData.h" />
+    <ClInclude Include="module\Launcher\GameLauncher\GameTemplateEngine.h" />
     <ClInclude Include="module\Launcher\GameLauncher\Scene\IScene.h" />
     <ClInclude Include="module\Launcher\GameLauncher\Scene\SceneManager.h" />
+    <ClInclude Include="module\System\RenderSystem\RenderPasses\ForwardOpaqueRenderPass.h" />
+    <ClInclude Include="module\System\RenderSystem\RenderPasses\PresentRenderPass.h" />
+    <ClInclude Include="module\Tool\Editor\Panels\PerformancePanel.h" />
+    <ClInclude Include="module\Tool\Editor\Panels\SceneControlPanel.h" />
+    <ClInclude Include="module\Tool\Editor\RenderPasses\CopyToFinalRenderPass.h" />
+    <ClInclude Include="module\Tool\Editor\RenderPasses\EditorOverlayRenderPass.h" />
+    <ClInclude Include="src\core\Context\RunTimeContext\ProjectExtensionContext.h" />
+    <ClInclude Include="src\core\Context\RunTimeContext\TemplateWorldContext.h" />
+    <ClInclude Include="src\core\Engine\IRuntimeContextConfigurator.h" />
+    <ClInclude Include="Engine\TemplateEngineBase\RuntimeContext.h" />
+    <ClInclude Include="Engine\TemplateEngineBase\TemplateEngineBase.h" />
+    <ClInclude Include="src\core\Render\RenderPassEvent.h" />
+    <ClInclude Include="src\core\Render\IRenderPass.h" />
     <ClInclude Include="module\System\TransformSystem\SubSystems\TransformComputeSystem.h" />
     <ClInclude Include="module\System\TransformSystem\SubSystems\TransformDirtySystem.h" />
     <ClInclude Include="module\System\TransformSystem\SubSystems\TransformHierarchySystem.h" />
     <ClInclude Include="module\Tool\Editor\EditorContext.h" />
     <ClInclude Include="module\Launcher\GameLauncher\GameLauncher.h" />
-    <ClInclude Include="module\Launcher\GameLauncher\RunTimeContext\WorldRunTime.h" />
-    <ClInclude Include="module\Launcher\GameLauncher\Runtime\LegacyGameEngineRuntime.h" />
     <ClInclude Include="module\System\AnimationSystem\AnimationSystem.h" />
     <ClInclude Include="module\System\AnimatorSystem\AnimatorSystem.h" />
     <ClInclude Include="module\System\InputSystem\InputSystem.h" />
@@ -465,7 +487,6 @@
     <ClInclude Include="module\DataProtocol\MeshAsset.h" />
     <ClInclude Include="module\DataProtocol\SkeletonAsset.h" />
     <ClInclude Include="module\DataProtocol\SkinAsset.h" />
-    <ClInclude Include="module\Tool\GameObject\GameObject.h" />
     <ClInclude Include="module\System\TransformSystem\TransformSystem.h" />
     <ClInclude Include="Project\Test01\Scenes\Test01PerfScenes.h" />
     <ClInclude Include="Project\Test01\Scripts\PlayerControllerScript.h" />
@@ -476,7 +497,6 @@
     <ClInclude Include="Project\Test01\Test01.h" />
     <ClInclude Include="src\core\Context\IContext.h" />
     <ClInclude Include="src\core\Context\RunTimeContext\ProjectContext.h" />
-    <ClInclude Include="src\core\Context\RunTimeContext\WorldContext.h" />
     <ClInclude Include="src\core\Context\TypeContext.h" />
     <ClInclude Include="src\core\Entity\Entity.h" />
     <ClInclude Include="src\core\Engine\IEngine.h" />
